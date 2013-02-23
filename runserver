@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cd `dirname $0`
+
+#sudo scripts/setup_sudoers.sh
+
+. scripts/path_config.sh
+python capport/portal/portal.py
