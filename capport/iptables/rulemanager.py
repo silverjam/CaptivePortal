@@ -1,10 +1,11 @@
 # -*- python -*-
 
 import subprocess
+
 from twisted.python import log
+from twisted.python.procutils import which
 
 from . import initial
-
 
 class RuleManagerActions (object):
     '''
@@ -12,17 +13,18 @@ class RuleManagerActions (object):
     '''
 
     def runIptables(self, args):
-        cmd = [ "sudo_iptables" ]
-        cmd.extend(args.split())
+        iptables = which("sudo_iptables")[0]
+        cmd = [ "sh", "-c", "sudo " + iptables + " " + args ]
         return subprocess.call(cmd)
 
     def saveIptables(self):
-        cmd = [ "sudo_iptables_save" ]
+        cmd = [ "sh", "-c", "sudo " + which("sudo_iptables_save")[0] ]
         return subprocess.check_output(cmd)
 
     def restoreIptables(self, inp):
-        cmd = [ "sudo_iptables_restore" ]
-        p = subprocess.Popen(cmd)
+        cmd = [ "sh", "-c", "sudo " + which("sudo_iptables_restore")[0] ]
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        #print inp
         p.communicate(inp)
         return p.returncode == 0
 

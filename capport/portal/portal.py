@@ -1,13 +1,10 @@
 # -*- python -*-
 
 import os
+import re
 import sys
-
 import cgi
-
-from datetime import datetime
-from optparse import OptionParser
-from ConfigParser import RawConfigParser
+import subprocess
 
 from twisted.application import internet
 from twisted.internet import reactor
@@ -16,6 +13,7 @@ from twisted.web import server, static, proxy, resource
 from twisted.web.util import redirectTo
 
 from capport.iptables.rulemanager import RuleManager
+
 
 SERVER_PORT = 8080
 
@@ -30,6 +28,24 @@ CHZBURGER_HOSTS = [
     'i3.ytimg.com',
     ]
 
+GOOG_HOSTS = [
+    'google.com',
+    'www.google.com',
+    'ssl.gstatic.com',
+]
+
+WIKI_HOSTS = [
+    'en.wikipedia.org',
+    'bits.wikimedia.org',
+    'upload.wikimedia.org',
+    'donate.wikimedia.org',
+    'meta.wikimedia.org',
+    'creativecommons.org',
+    'wikimediafoundation.org',
+    'www.wikimediafoundation.org',
+]
+
+BROWSE_HOSTS = WIKI_HOSTS
 
 class FormPage(resource.Resource):
 
@@ -40,7 +56,19 @@ class FormPage(resource.Resource):
         return '<html><body><p>Nothing here, use POST instead of GET.</p></body></html>'
 
     def render_POST(self, request):
-        log.msg("User accepted the agreement!")
+
+        cmd = ["arp", "-n", request.getClientIP()]
+        print cmd
+
+        pid = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        arp_output = pid.communicate()[0]
+        
+        if arp_output:
+            mac = re.search(r"(([a-f\d]{1,2}\:){5}[a-f\d]{1,2})", arp_output).groups()[0]
+            log.msg("User accepted the agreement: ", mac)
+
+            self._rulemgr.unblockUser(mac)
+
         return '<html><body>Thanks!</body></html>'
 
 
@@ -58,10 +86,14 @@ class PortalResource(static.File):
         if path == "iaccepttheboringagreement":
             return FormPage(self._rulemgr)
 
-        for proxyhost in CHZBURGER_HOSTS:
+        for proxyhost in BROWSE_HOSTS:
             if path.startswith(proxyhost):
                 log.msg(path)
                 return proxy.ReverseProxyResource(proxyhost, 80, '/')
+            reqHost = request.getRequestHostname()
+            if reqHost.startswith(proxyhost):
+                log.msg(reqHost)
+                return proxy.ReverseProxyResource(reqHost, 80, '/' + path)
 
         return self
 
@@ -73,7 +105,13 @@ def main():
     site = server.Site(PortalResource(rulemgr))
     service = internet.TCPServer(SERVER_PORT, site)
     service.startService()
-    reactor.run()
+
+    try:
+        rulemgr.setUp()
+        reactor.run()
+
+    finally:
+        rulemgr.tearDown()
 
 if __name__ == '__main__':
     main()
