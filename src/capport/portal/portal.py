@@ -11,7 +11,9 @@ from twisted.web import server, static, proxy
 from twisted.web.util import redirectTo
 
 SERVER_PORT = 8080
-ROOT_PAGE = 'page.html'
+
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+ROOT_PAGE = os.path.join(THIS_DIR, 'page.html')
 
 CHZBURGER_HOSTS = [
     'icanhas.cheezburger.com',
@@ -24,9 +26,12 @@ CHZBURGER_HOSTS = [
 class PortalResource(static.File):
 
     def __init__(self):
-        static.File.__init__(self, ROOT_PAGE, defaultType='text/html')
+        static.File.__init__(self, ROOT_PAGE)
 
     def getChild(self, path, request):
+
+        if path == "agreement.html":
+            return static.File(os.path.join(THIS_DIR, "agreement.html"))
 
         for proxyhost in CHZBURGER_HOSTS:
             if path.startswith(proxyhost):
