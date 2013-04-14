@@ -1,13 +1,6 @@
 # Captive Portal Tech Challenge
 
-## Video and introduction
-
-I made a short demo of the *captive portal*, it can be seen here:
-
- - [WiFast Tech Challenge](http://bit.ly/UUxbVq)
-
-...blame linux for the cell phone video (for not having a decent screen
-recording package).
+## Introduction
 
 The following package uses pip and virtualenv.  So a functional deployment
 requires creatinga virtualenv:
